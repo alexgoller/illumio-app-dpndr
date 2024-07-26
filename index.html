@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Traffic Graph Generator</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.21.1/axios.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        form {
+            display: grid;
+            gap: 10px;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 5px;
+        }
+        button {
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        #result {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Traffic Graph Generator</h1>
+    <form id="graphForm">
+        <input type="text" id="pce_host" placeholder="PCE Host" required>
+        <input type="number" id="port" placeholder="Port" required>
+        <input type="text" id="org_id" placeholder="Organization ID" required>
+        <input type="text" id="api_key" placeholder="API Key" required>
+        <input type="password" id="api_secret" placeholder="API Secret" required>
+        <button type="submit">Generate Graph</button>
+    </form>
+    <div id="result">
+        <img id="graphImage" style="display: none; max-width: 100%;" alt="Traffic Graph">
+    </div>
+
+    <script>
+        document.getElementById('graphForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const formData = new FormData(e.target);
+            const data = Object.fromEntries(formData.entries());
+            
+            try {
+                const response = await axios.post('YOUR_API_GATEWAY_ENDPOINT', data);
+                const imageUrl = response.data.image_url;
+                const graphImage = document.getElementById('graphImage');
+                graphImage.src = imageUrl;
+                graphImage.style.display = 'block';
+            } catch (error) {
+                console.error('Error:', error);
+                alert('An error occurred while generating the graph.');
+            }
+        });
+    </script>
+</body>
+</html>
