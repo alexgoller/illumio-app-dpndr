@@ -87,12 +87,13 @@ def lambda_handler(event, context):
 		}
 	
 	# Handle preflight request
-	if event['httpMethod'] == 'OPTIONS':
-		return {
-			'statusCode': 200,
-			'headers': headers,
-			'body': json.dumps('OK')
-		}
+		if event['httpMethod'] == 'OPTIONS':
+			print('Preflight request')
+			return {
+				'statusCode': 200,
+				'headers': headers,
+				'body': json.dumps('OK')
+			}
 		
 		print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
 		# Get traffic data from your API
