@@ -185,12 +185,11 @@ def lambda_handler(event, context):
 		
 		fig.update_layout(title_text="Application Flow Sankey Diagram", font_size=10)
 		
-		# Save graph as image
-		img_bytes = fig.to_image(format="png")
+		html_content = fig.to_html(include_plotlyjs=True, full_html=True)
 		
 		# Upload to S3
-		filename = f"graph_{context.aws_request_id}.png"
-		s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=img_bytes, ContentType='image/png')
+		filename = f"graph_{context.aws_request_id}.html"
+		s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=img_bytes, ContentType='text/html')
 		
 		# Generate presigned URL
 		url = s3.generate_presigned_url('get_object',
