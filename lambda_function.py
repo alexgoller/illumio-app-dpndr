@@ -25,8 +25,11 @@ def traffic_flow_unique_name(flow):
 	)
 
 def to_dataframe(flows) -> pd.DataFrame:
+	global label_href_map
+	global value_href_map
 	print("In to_dataframe")
 	print(len(flows))
+
 	series_array = []
 	
 	for flow in flows:
@@ -65,6 +68,8 @@ def to_dataframe(flows) -> pd.DataFrame:
 	return df
 
 def lambda_handler(event, context):
+	global label_href_map
+	global value_href_map
 	try:
 		# Parse input parameters
 		body = json.loads(event['body'])
