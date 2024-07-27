@@ -93,6 +93,8 @@ def lambda_handler(event, context):
 		d_start = d_end - month
 		d_start_f = d_start.strftime("%Y-%m-%d")
 
+		print(f'Start Date: {d_start_f}	End Date: {d_end_f}')
+
 		# be sure to limit the query to a finite number of elements for testing here. (max_results = 10)
 		traffic_query = TrafficQuery.build(
 				start_date = d_start_f,
@@ -120,11 +122,13 @@ def lambda_handler(event, context):
 
 		all_traffic = pce.get_traffic_flows_async(
 			query_name = 'all-traffic',
-			traffic_query = traffic_query,
-		  
+			traffic_query = traffic_query
 		)
 
+		print(f'All Traffic: {len(all_traffic)}')
+
 		df = to_dataframe(all_traffic)
+		print(f'Converted to dataframe: {df.shape}')
 
 		connections = defaultdict(lambda: defaultdict(int))
 
