@@ -71,6 +71,7 @@ def lambda_handler(event, context):
 		api_key = body['api_key']
 		api_secret = body['api_secret']
 		
+		print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
 		# Get traffic data from your API
 		pce = PolicyComputeEngine(pce_host, port=pce_port, org_id = org_id)
 		pce.set_credentials(api_key, api_secret)
