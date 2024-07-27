@@ -78,6 +78,21 @@ def lambda_handler(event, context):
 		org_id = body['org_id']
 		api_key = body['api_key']
 		api_secret = body['api_secret']
+
+		# CORS headers
+		headers = {
+			'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.amazonaws.com',
+			'Access-Control-Allow-Headers': 'Content-Type',
+			'Access-Control-Allow-Methods': 'OPTIONS,POST'
+		}
+	
+	# Handle preflight request
+	if event['httpMethod'] == 'OPTIONS':
+		return {
+			'statusCode': 200,
+			'headers': headers,
+			'body': json.dumps('OK')
+		}
 		
 		print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
 		# Get traffic data from your API
