@@ -12,6 +12,9 @@ import plotly.graph_objects as go
 s3 = boto3.client('s3')
 BUCKET_NAME = os.environ['S3_BUCKET_NAME']
 
+label_href_map = {}
+value_href_map = {}
+
 def traffic_flow_unique_name(flow):
 	return "{}-{}_{}-{}_{}".format(
 		flow.src.ip,
@@ -81,8 +84,6 @@ def lambda_handler(event, context):
 		else:
 			print(f'Connection to PCE failed: {pce_host} {pce_port} {org_id} {api_key}')
 
-		label_href_map = {}
-		value_href_map = {}
 
 		# fill label dict, this reads all labels and puts the object into a value of a dict. The dict key is the label name.
 		for l in pce.labels.get():
