@@ -214,10 +214,7 @@ def lambda_handler(event, context):
 		return {
 			'statusCode': 200,
 			'body': json.dumps({'image_url': url}),
-			'headers': {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
-			}
+			'headers': headers
 		}
 	except Exception as e:
 		return {
