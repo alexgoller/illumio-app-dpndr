@@ -189,7 +189,7 @@ def lambda_handler(event, context):
 		
 		# Upload to S3
 		filename = f"graph_{context.aws_request_id}.html"
-		s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=img_bytes, ContentType='text/html')
+		s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=html_content, ContentType='text/html')
 		
 		# Generate presigned URL
 		url = s3.generate_presigned_url('get_object',
