@@ -89,6 +89,8 @@ def lambda_handler(event, context):
 			label_href_map[l.href] = { "key": l.key, "value": l.value }
 			value_href_map["{}={}".format(l.key, l.value)] = l.href
 
+		print(f'Label Href Map: {label_href_map}')
+
 		# use a start date and subtract a month of it using a timedelta object
 		month = timedelta(days=30)
 		d_end   = datetime.now()
