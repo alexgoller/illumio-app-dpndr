@@ -76,7 +76,11 @@ def lambda_handler(event, context):
 		pce = PolicyComputeEngine(pce_host, port=pce_port, org_id = org_id)
 		pce.set_credentials(api_key, api_secret)
 
-		import os
+		if pce.check_connection():
+			print("Connection to PCE successful")
+		else:
+			print(f'Connection to PCE failed: {pce_host} {pce_port} {org_id} {api_key}')
+
 		label_href_map = {}
 		value_href_map = {}
 
@@ -116,7 +120,7 @@ def lambda_handler(event, context):
 					}
 				],
 				policy_decisions = ['allowed', 'blocked', 'potentially_blocked'],
-				max_results = 10000
+				max_results = 1000
 			)
 
 
