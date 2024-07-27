@@ -70,6 +70,22 @@ def to_dataframe(flows) -> pd.DataFrame:
 def lambda_handler(event, context):
 	global label_href_map
 	global value_href_map
+	# CORS headers
+	print(f'Event: {event}')
+	headers = {
+		'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.amazonaws.com',
+		'Access-Control-Allow-Headers': 'Content-Type',
+		'Access-Control-Allow-Methods': 'OPTIONS,POST'
+	}
+	# Handle preflight request
+	if event['httpMethod'] == 'OPTIONS':
+		print('Preflight request')
+		return {
+			'statusCode': 200,
+			'headers': headers,
+			'body': json.dumps('OK')
+		}
+
 	try:
 		# Parse input parameters
 		body = json.loads(event['body'])
@@ -79,21 +95,6 @@ def lambda_handler(event, context):
 		api_key = body['api_key']
 		api_secret = body['api_secret']
 
-		# CORS headers
-		headers = {
-			'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.amazonaws.com',
-			'Access-Control-Allow-Headers': 'Content-Type',
-			'Access-Control-Allow-Methods': 'OPTIONS,POST'
-		}
-	
-	# Handle preflight request
-		if event['httpMethod'] == 'OPTIONS':
-			print('Preflight request')
-			return {
-				'statusCode': 200,
-				'headers': headers,
-				'body': json.dumps('OK')
-			}
 		
 		print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
 		# Get traffic data from your API
