@@ -53,7 +53,7 @@
             const data = Object.fromEntries(formData.entries());
             
             try {
-                const response = await axios.post('YOUR_API_GATEWAY_ENDPOINT', data);
+                const response = await axios.post('https://67rkyh73b9.execute-api.eu-central-1.amazonaws.com/default/illumio-app-dpndr', data);
                 const imageUrl = response.data.image_url;
                 const graphImage = document.getElementById('graphImage');
                 graphImage.src = imageUrl;
