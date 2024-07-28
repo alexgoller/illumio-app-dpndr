@@ -90,6 +90,7 @@ def lambda_handler(event, context):
 			}
 		elif event['requestContext']['http']['method'] != 'POST':
 			print('In POST processing')
+
 			# Parse input parameters
 			body = json.loads(event['body'])
 			pce_host = body['pce_host']
@@ -228,6 +229,11 @@ def lambda_handler(event, context):
 			}
 		else:
 			print('Invalid request method')
+			return {
+				'statusCode': 400,
+				'headers': headers,
+				'body': json.dumps('Unsupported method')
+   			}
 	except Exception as e:
 		return {
 			'statusCode': 500,
