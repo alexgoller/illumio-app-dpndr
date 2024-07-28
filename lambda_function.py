@@ -171,7 +171,8 @@ def lambda_handler(event, context):
 			for _, row in df.iterrows():
 				src = f"{row['src_app']} ({row['src_env']})"
 				dst = f"{row['dst_app']} ({row['dst_env']})"
-				connections[src][dst] += 1
+				if src != dst:
+					connections[src][dst] += 1
 			
 			# Create lists for Sankey diagram
 			sources = []
@@ -217,6 +218,8 @@ def lambda_handler(event, context):
 			url = s3.generate_presigned_url('get_object',
 											Params={'Bucket': BUCKET_NAME, 'Key': filename},
 											ExpiresIn=3600)
+			
+			print(f'Generated document: {url}, {filename}')
 			
 			return {
 				'statusCode': 200,
