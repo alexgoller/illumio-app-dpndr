@@ -73,10 +73,12 @@ def lambda_handler(event, context):
 	# CORS headers
 	print(f'Event: {event}')
 	headers = {
-		'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.amazonaws.com',
+		'Content-Type': 'application/json'
+		'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
 		'Access-Control-Allow-Headers': 'Content-Type',
 		'Access-Control-Allow-Methods': 'OPTIONS,POST'
 	}
+
 	# Handle preflight request
 	if event['httpMethod'] == 'OPTIONS':
 		print('Preflight request')
@@ -216,7 +218,13 @@ def lambda_handler(event, context):
 		return {
 			'statusCode': 200,
 			'body': json.dumps({'image_url': url}),
-			'headers': headers
+			'headers': {
+				'Access-Control-Allow-Origin': '*',
+				'Content-Type': 'application/json'
+				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
+				'Access-Control-Allow-Headers': 'Content-Type',
+				'Access-Control-Allow-Methods': 'OPTIONS,POST'
+			}
 		}
 	except Exception as e:
 		return {
@@ -225,5 +233,8 @@ def lambda_handler(event, context):
 			'headers': {
 				'Access-Control-Allow-Origin': '*',
 				'Content-Type': 'application/json'
+				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
+				'Access-Control-Allow-Headers': 'Content-Type',
+				'Access-Control-Allow-Methods': 'OPTIONS,POST'
 			}
 		}
