@@ -80,7 +80,7 @@ def lambda_handler(event, context):
 	}
 
 	try:
-		# Handle preflight request
+		print('In Lambda Handler, processing event')
 		if event['requestContext']['http']['method'] == 'OPTIONS':
 			print('Preflight request')
 			return {
