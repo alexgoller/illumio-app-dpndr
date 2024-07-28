@@ -149,8 +149,8 @@ def lambda_handler(event, context):
 							"transmission": "multicast"
 						}
 					],
-					policy_decisions = ['allowed', 'blocked', 'potentially_blocked'],
-					max_results = 1000
+					policy_decisions = ['allowed', 'potentially_blocked'],
+					max_results = 10000
 				)
 
 
