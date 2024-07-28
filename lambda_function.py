@@ -73,7 +73,7 @@ def lambda_handler(event, context):
 	# CORS headers
 	print(f'Event: {event}')
 	headers = {
-		'Content-Type': 'application/json'
+		'Content-Type': 'application/json',
 		'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
 		'Access-Control-Allow-Headers': 'Content-Type',
 		'Access-Control-Allow-Methods': 'OPTIONS,POST'
@@ -219,8 +219,8 @@ def lambda_handler(event, context):
 			'statusCode': 200,
 			'body': json.dumps({'image_url': url}),
 			'headers': {
+				'Content-Type': 'application/json',
 				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
 				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
 				'Access-Control-Allow-Headers': 'Content-Type',
 				'Access-Control-Allow-Methods': 'OPTIONS,POST'
@@ -232,7 +232,7 @@ def lambda_handler(event, context):
 			'body': json.dumps({'error': str(e)}),
 			'headers': {
 				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json'
+				'Content-Type': 'application/json',
 				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
 				'Access-Control-Allow-Headers': 'Content-Type',
 				'Access-Control-Allow-Methods': 'OPTIONS,POST'
