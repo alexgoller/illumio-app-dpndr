@@ -90,7 +90,7 @@ def lambda_handler(event, context):
 				'headers': headers,
 				'body': json.dumps('OK')
 			}
-		elif event['requestContext']['http']['method'] != 'POST':
+		elif event['requestContext']['http']['method'] == 'POST':
 			print('In POST processing')
 
 			# Parse input parameters
