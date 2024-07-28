@@ -80,161 +80,160 @@ def lambda_handler(event, context):
 	}
 
 	# Handle preflight request
-	if event['httpMethod'] == 'OPTIONS':
-		print('Preflight request')
+	if event['requestContext']['http']['method'] == 'OPTIONS':
 		return {
 			'statusCode': 200,
 			'headers': headers,
 			'body': json.dumps('OK')
 		}
+	elif event['requestContext']['http']['method'] != 'POST':
+		try:
+			# Parse input parameters
+			body = json.loads(event['body'])
+			pce_host = body['pce_host']
+			pce_port = int(body['port'])
+			org_id = body['org_id']
+			api_key = body['api_key']
+			api_secret = body['api_secret']
 
-	try:
-		# Parse input parameters
-		body = json.loads(event['body'])
-		pce_host = body['pce_host']
-		pce_port = int(body['port'])
-		org_id = body['org_id']
-		api_key = body['api_key']
-		api_secret = body['api_secret']
+			
+			print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
+			# Get traffic data from your API
+			pce = PolicyComputeEngine(pce_host, port=pce_port, org_id = org_id)
+			pce.set_credentials(api_key, api_secret)
 
-		
-		print(f'PCE Host: {pce_host}	Port: {pce_port}	Org ID: {org_id}	API Key: {api_key}')
-		# Get traffic data from your API
-		pce = PolicyComputeEngine(pce_host, port=pce_port, org_id = org_id)
-		pce.set_credentials(api_key, api_secret)
-
-		if pce.check_connection():
-			print("Connection to PCE successful")
-		else:
-			print(f'Connection to PCE failed: {pce_host} {pce_port} {org_id} {api_key}')
+			if pce.check_connection():
+				print("Connection to PCE successful")
+			else:
+				print(f'Connection to PCE failed: {pce_host} {pce_port} {org_id} {api_key}')
 
 
-		# fill label dict, this reads all labels and puts the object into a value of a dict. The dict key is the label name.
-		for l in pce.labels.get():
-			label_href_map[l.href] = { "key": l.key, "value": l.value }
-			value_href_map["{}={}".format(l.key, l.value)] = l.href
+			# fill label dict, this reads all labels and puts the object into a value of a dict. The dict key is the label name.
+			for l in pce.labels.get():
+				label_href_map[l.href] = { "key": l.key, "value": l.value }
+				value_href_map["{}={}".format(l.key, l.value)] = l.href
 
-		print(f'Label Href Map: {label_href_map}')
+			print(f'Label Href Map: {label_href_map}')
 
-		# use a start date and subtract a month of it using a timedelta object
-		month = timedelta(days=30)
-		d_end   = datetime.now()
-		d_end_f = d_end.strftime("%Y-%m-%d")
+			# use a start date and subtract a month of it using a timedelta object
+			month = timedelta(days=30)
+			d_end   = datetime.now()
+			d_end_f = d_end.strftime("%Y-%m-%d")
 
-		d_start = d_end - month
-		d_start_f = d_start.strftime("%Y-%m-%d")
+			d_start = d_end - month
+			d_start_f = d_start.strftime("%Y-%m-%d")
 
-		print(f'Start Date: {d_start_f}	End Date: {d_end_f}')
+			print(f'Start Date: {d_start_f}	End Date: {d_end_f}')
 
-		# be sure to limit the query to a finite number of elements for testing here. (max_results = 10)
-		traffic_query = TrafficQuery.build(
-				start_date = d_start_f,
-				end_date = d_end_f,
-				include_services = [],
-				exclude_services = [
-					{ "port": 53 },
-					{ "port": 137 },
-					{ "port": 138 },
-					{ "port": 139 },
-					{ "proto": "udp" }
-				],
-				exclude_destinations = [
-					{
-						"transmission": "broadcast"
-					},
-					{
-						"transmission": "multicast"
-					}
-				],
-				policy_decisions = ['allowed', 'blocked', 'potentially_blocked'],
-				max_results = 1000
+			# be sure to limit the query to a finite number of elements for testing here. (max_results = 10)
+			traffic_query = TrafficQuery.build(
+					start_date = d_start_f,
+					end_date = d_end_f,
+					include_services = [],
+					exclude_services = [
+						{ "port": 53 },
+						{ "port": 137 },
+						{ "port": 138 },
+						{ "port": 139 },
+						{ "proto": "udp" }
+					],
+					exclude_destinations = [
+						{
+							"transmission": "broadcast"
+						},
+						{
+							"transmission": "multicast"
+						}
+					],
+					policy_decisions = ['allowed', 'blocked', 'potentially_blocked'],
+					max_results = 1000
+				)
+
+
+			all_traffic = pce.get_traffic_flows_async(
+				query_name = 'all-traffic',
+				traffic_query = traffic_query
 			)
 
+			print(f'All Traffic: {len(all_traffic)}')
 
-		all_traffic = pce.get_traffic_flows_async(
-			query_name = 'all-traffic',
-			traffic_query = traffic_query
-		)
+			df = to_dataframe(all_traffic)
+			print(f'Converted to dataframe: {df.shape}')
 
-		print(f'All Traffic: {len(all_traffic)}')
+			connections = defaultdict(lambda: defaultdict(int))
 
-		df = to_dataframe(all_traffic)
-		print(f'Converted to dataframe: {df.shape}')
-
-		connections = defaultdict(lambda: defaultdict(int))
-
-		#### TODO
-		# Process each row in the DataFrame
-		for _, row in df.iterrows():
-			src = f"{row['src_app']} ({row['src_env']})"
-			dst = f"{row['dst_app']} ({row['dst_env']})"
-			connections[src][dst] += 1
-		
-		# Create lists for Sankey diagram
-		sources = []
-		targets = []
-		values = []
-		labels = set()
-		
-		for source, destinations in connections.items():
-			for target, value in destinations.items():
-				sources.append(source)
-				targets.append(target)
-				values.append(value)
-				labels.add(source)
-				labels.add(target)
-		
-		labels = list(labels)
-		label_to_index = {label: i for i, label in enumerate(labels)}
-		
-		# Create the Sankey diagram
-		fig = go.Figure(data=[go.Sankey(
-			node = dict(
-			  pad = 15,
-			  thickness = 20,
-			  line = dict(color = "black", width = 0.5),
-			  label = labels,
-			  color = "blue"
-			),
-			link = dict(
-			  source = [label_to_index[s] for s in sources],
-			  target = [label_to_index[t] for t in targets],
-			  value = values
-		  ))])
-		
-		fig.update_layout(title_text="Application Flow Sankey Diagram", font_size=10)
-		
-		html_content = fig.to_html(include_plotlyjs=True, full_html=True)
-		
-		# Upload to S3
-		filename = f"graph_{context.aws_request_id}.html"
-		s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=html_content, ContentType='text/html')
-		
-		# Generate presigned URL
-		url = s3.generate_presigned_url('get_object',
-										Params={'Bucket': BUCKET_NAME, 'Key': filename},
-										ExpiresIn=3600)
-		
-		return {
-			'statusCode': 200,
-			'body': json.dumps({'image_url': url}),
-			'headers': {
-				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': '*',
-				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
-				'Access-Control-Allow-Headers': 'Content-Type',
-				'Access-Control-Allow-Methods': 'OPTIONS,POST'
+			#### TODO
+			# Process each row in the DataFrame
+			for _, row in df.iterrows():
+				src = f"{row['src_app']} ({row['src_env']})"
+				dst = f"{row['dst_app']} ({row['dst_env']})"
+				connections[src][dst] += 1
+			
+			# Create lists for Sankey diagram
+			sources = []
+			targets = []
+			values = []
+			labels = set()
+			
+			for source, destinations in connections.items():
+				for target, value in destinations.items():
+					sources.append(source)
+					targets.append(target)
+					values.append(value)
+					labels.add(source)
+					labels.add(target)
+			
+			labels = list(labels)
+			label_to_index = {label: i for i, label in enumerate(labels)}
+			
+			# Create the Sankey diagram
+			fig = go.Figure(data=[go.Sankey(
+				node = dict(
+				pad = 15,
+				thickness = 20,
+				line = dict(color = "black", width = 0.5),
+				label = labels,
+				color = "blue"
+				),
+				link = dict(
+				source = [label_to_index[s] for s in sources],
+				target = [label_to_index[t] for t in targets],
+				value = values
+			))])
+			
+			fig.update_layout(title_text="Application Flow Sankey Diagram", font_size=10)
+			
+			html_content = fig.to_html(include_plotlyjs=True, full_html=True)
+			
+			# Upload to S3
+			filename = f"graph_{context.aws_request_id}.html"
+			s3.put_object(Bucket=BUCKET_NAME, Key=filename, Body=html_content, ContentType='text/html')
+			
+			# Generate presigned URL
+			url = s3.generate_presigned_url('get_object',
+											Params={'Bucket': BUCKET_NAME, 'Key': filename},
+											ExpiresIn=3600)
+			
+			return {
+				'statusCode': 200,
+				'body': json.dumps({'image_url': url}),
+				'headers': {
+					'Content-Type': 'application/json',
+					'Access-Control-Allow-Origin': '*',
+					'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
+					'Access-Control-Allow-Headers': 'Content-Type',
+					'Access-Control-Allow-Methods': 'OPTIONS,POST'
+				}
 			}
-		}
-	except Exception as e:
-		return {
-			'statusCode': 500,
-			'body': json.dumps({'error': str(e)}),
-			'headers': {
-				'Access-Control-Allow-Origin': '*',
-				'Content-Type': 'application/json',
-				'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
-				'Access-Control-Allow-Headers': 'Content-Type',
-				'Access-Control-Allow-Methods': 'OPTIONS,POST'
+		except Exception as e:
+			return {
+				'statusCode': 500,
+				'body': json.dumps({'error': str(e)}),
+				'headers': {
+					'Access-Control-Allow-Origin': '*',
+					'Content-Type': 'application/json',
+					'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
+					'Access-Control-Allow-Headers': 'Content-Type',
+					'Access-Control-Allow-Methods': 'OPTIONS,POST'
+				}
 			}
-		}
