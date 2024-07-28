@@ -228,7 +228,7 @@ def lambda_handler(event, context):
 				}
 			}
 		else:
-			print('Invalid request method')
+			print(f'Invalid request method: {event["requestContext"]["http"]["method"]}')
 			return {
 				'statusCode': 400,
 				'headers': headers,
