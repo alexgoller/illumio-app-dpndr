@@ -226,6 +226,8 @@ def lambda_handler(event, context):
 					'Access-Control-Allow-Methods': 'OPTIONS,POST'
 				}
 			}
+		else:
+			print('Invalid request method')
 	except Exception as e:
 		return {
 			'statusCode': 500,
