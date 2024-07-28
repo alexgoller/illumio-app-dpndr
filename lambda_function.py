@@ -150,7 +150,7 @@ def lambda_handler(event, context):
 						}
 					],
 					policy_decisions = ['allowed', 'potentially_blocked'],
-					max_results = 10000
+					max_results = 5000
 				)
 
 
