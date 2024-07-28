@@ -72,6 +72,8 @@ def lambda_handler(event, context):
 	global value_href_map
 	# CORS headers
 	print(f'Event: {event}')
+	print(f'Event json: {json.dumps(event)}')
+
 	headers = {
 		'Content-Type': 'application/json',
 		'Access-Control-Allow-Origin': 'https://illumio-app-dpndr.s3.eu-central-1.amazonaws.com',
