@@ -1,6 +1,17 @@
-# Illumio Traffic Analysis CLI Tool
+# Illumio App Dpndr command line tool
 
 This CLI tool provides powerful traffic analysis and visualization capabilities for Illumio PolicyComputeEngine (PCE) data. It allows users to generate various types of traffic graphs based on PCE data, offering insights into network flows and application communications.
+
+## Examples
+
+### Sankey Diagram
+![Sankey Diagram](../examples/examples_sankey.png)
+
+### Sunburst Diagram
+![Sunburst Diagram](../examples/examples_sunburst.png)
+
+### Graphviz Directed Graph
+![Graphviz Directed Graph](../examples/examples_graphviz.png)
 
 ## Features
 
