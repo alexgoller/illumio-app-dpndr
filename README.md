@@ -8,7 +8,7 @@ The cli version has extended capabilities for generating graphviz, sankey and su
 ## Examples
 
 ### Sankey Diagram
-![Sankey Diagram](../examples/examples_sankey.png)
+![Sankey Diagram](examples/examples_sankey.png)
 
 ## Features
 - Fetches traffic data from Illumio PCE
