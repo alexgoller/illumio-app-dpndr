@@ -237,6 +237,30 @@ def cli():
 	pass
 
 @cli.command()
+@click.option('--depth', type=int, default=2, help='Depth of the tree map (1 for protocol only, 2 for protocol and port)')
+# Add other options similar to the 'traffic' command
+def treemap(depth, **kwargs):
+	"""Generate a tree map of traffic flows ordered by IP protocol and ports."""
+	pass
+	
+@cli.command()
+@click.option('--top', type=int, default=10, help='Number of top traffic flows to display')
+@click.option('--metric', type=click.Choice(['connections', 'bytes']), default='connections', help='Metric to use for ranking')
+# Add other options similar to the 'traffic' command
+def top_traffic(top, metric, **kwargs):
+	"""Analyze and display the top traffic flows."""
+	# Implement the top traffic analysis logic here
+	pass
+
+@cli.command()
+@click.option('--top', type=int, default=10, help='Number of top ports to display')
+# Add other options similar to the 'traffic' command
+def top_ports(top, **kwargs):
+	"""Identify and display the top ports used in traffic."""
+	# Implement the top ports analysis logic here
+	pass
+
+@cli.command()
 @click.option('--pce-host', required=True, help='PCE host')
 @click.option('--port', required=True, type=int, help='PCE port')
 @click.option('--org-id', required=True, help='Organization ID')
