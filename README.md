@@ -5,6 +5,11 @@ This project provides a solution for visualizing network dependencies and traffi
 
 The cli version has extended capabilities for generating graphviz, sankey and sunburst diagrams.
 
+## Examples
+
+### Sankey Diagram
+![Sankey Diagram](../examples/examples_sankey.png)
+
 ## Features
 - Fetches traffic data from Illumio PCE
 - Generates a Sankey diagram to visualize network dependencies
