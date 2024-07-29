@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -16,7 +17,7 @@
             display: grid;
             gap: 10px;
         }
-        input[type="text"], input[type="number"] {
+        input[type="text"], input[type="number"], input[type="password"] {
             width: 100%;
             padding: 5px;
         }
@@ -30,20 +31,32 @@
         #result {
             margin-top: 20px;
         }
+        #graphFrame {
+            width: 100%;
+            height: 600px;
+            border: none;
+            display: none;
+        }
+        #loadingIndicator {
+            display: none;
+            text-align: center;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <h1>Traffic Graph Generator</h1>
     <form id="graphForm">
-        <input type="text" id="pce_host" placeholder="PCE Host" required>
-        <input type="number" id="port" placeholder="Port" required>
-        <input type="text" id="org_id" placeholder="Organization ID" required>
-        <input type="text" id="api_key" placeholder="API Key" required>
-        <input type="password" id="api_secret" placeholder="API Secret" required>
+        <input type="text" id="pce_host" name="pce_host" placeholder="PCE Host" required>
+        <input type="number" id="port" name="port" placeholder="Port" required>
+        <input type="text" id="org_id" name="org_id" placeholder="Organization ID" required>
+        <input type="text" id="api_key" name="api_key" placeholder="API Key" required>
+        <input type="password" id="api_secret" name="api_secret" placeholder="API Secret" required>
         <button type="submit">Generate Graph</button>
     </form>
+    <div id="loadingIndicator">Generating graph, please wait...</div>
     <div id="result">
-        <img id="graphImage" style="display: none; max-width: 100%;" alt="Traffic Graph">
+        <iframe id="graphFrame" title="Sankey Diagram"></iframe>
     </div>
 
     <script>
@@ -52,15 +65,22 @@
             const formData = new FormData(e.target);
             const data = Object.fromEntries(formData.entries());
             
+            // Show loading indicator
+            document.getElementById('loadingIndicator').style.display = 'block';
+            document.getElementById('graphFrame').style.display = 'none';
+            
             try {
                 const response = await axios.post('https://67rkyh73b9.execute-api.eu-central-1.amazonaws.com/default/illumio-app-dpndr', data);
-                const imageUrl = response.data.image_url;
-                const graphImage = document.getElementById('graphImage');
-                graphImage.src = imageUrl;
-                graphImage.style.display = 'block';
+                const htmlUrl = response.data.html_url;
+                const graphFrame = document.getElementById('graphFrame');
+                graphFrame.src = htmlUrl;
+                graphFrame.style.display = 'block';
             } catch (error) {
                 console.error('Error:', error);
                 alert('An error occurred while generating the graph.');
+            } finally {
+                // Hide loading indicator
+                document.getElementById('loadingIndicator').style.display = 'none';
             }
         });
     </script>
