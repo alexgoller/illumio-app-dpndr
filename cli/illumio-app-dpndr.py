@@ -21,17 +21,18 @@ import networkx as nx
 import io
 
 def global_options(f):
-    @click.option('--pce-host', required=True, help='PCE host')
-    @click.option('--port', required=True, type=int, help='PCE port')
-    @click.option('--org-id', required=True, help='Organization ID')
-    @click.option('--api-key', required=True, help='API key')
-    @click.option('--api-secret', required=True, help='API secret')
-    @click.option('--start', default='30 days ago', help='Start date (YYYY-MM-DD or "X days ago")')
-    @click.option('--end', default='today', help='End date (YYYY-MM-DD or "X days ago")')
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        return f(*args, **kwargs)
-    return wrapper
+	@click.option('--pce-host', required=True, help='PCE host')
+	@click.option('--port', required=True, type=int, help='PCE port')
+	@click.option('--org-id', required=True, help='Organization ID')
+	@click.option('--api-key', required=True, help='API key')
+	@click.option('--api-secret', required=True, help='API secret')
+	@click.option('--start', default='30 days ago', help='Start date (YYYY-MM-DD or "X days ago")')
+	@click.option('--end', default='today', help='End date (YYYY-MM-DD or "X days ago")')
+	@click.option('--limit', type=int, default=2000, help='Maximum number of traffic flows to fetch')
+	@wraps(f)
+	def wrapper(*args, **kwargs):
+		return f(*args, **kwargs)
+	return wrapper
 
 label_href_map = {}
 value_href_map = {}
@@ -277,61 +278,36 @@ def export_plotly(fig, output_format):
 		img_bytes = scope.transform(fig, format=output_format)
 		return img_bytes
 
-@click.group()
-def cli():
-	"""Illumio CLI tool for traffic analysis and visualization."""
-	pass
-
-@cli.command()
-@global_options
-@click.option('--depth', type=int, default=2, help='Depth of the tree map (1 for protocol only, 2 for protocol and port)')
-# Add other options similar to the 'traffic' command
-def treemap(depth, **kwargs):
-	"""Generate a tree map of traffic flows ordered by IP protocol and ports."""
-	pass
+def generate_app_env_treemap(df, column_prefix, title):
+	required_columns = [f'{column_prefix}_app', f'{column_prefix}_env']
 	
-@cli.command()
-@global_options
-@click.option('--top', type=int, default=10, help='Number of top traffic flows to display')
-@click.option('--metric', type=click.Choice(['connections', 'bytes']), default='connections', help='Metric to use for ranking')
-# Add other options similar to the 'traffic' command
-def top_traffic(top, metric, **kwargs):
-	"""Analyze and display the top traffic flows."""
-	# Implement the top traffic analysis logic here
-	pass
+	# Check if required columns exist
+	missing_columns = [col for col in required_columns if col not in df.columns]
+	if missing_columns:
+		click.echo(f"Error: The following required columns are missing: {', '.join(missing_columns)}")
+		click.echo(f"Available columns: {', '.join(df.columns)}")
+		return None
 
-@cli.command()
-@global_options
-@click.option('--top', type=int, default=10, help='Number of top ports to display')
-# Add other options similar to the 'traffic' command
-def top_ports(top, **kwargs):
-	"""Identify and display the top ports used in traffic."""
-	# Implement the top ports analysis logic here
-	pass
+	df[f'{column_prefix}_app_env'] = df[f'{column_prefix}_app'] + ' | ' + df[f'{column_prefix}_env']
+	app_env_counts = df.groupby([f'{column_prefix}_env', f'{column_prefix}_app', f'{column_prefix}_app_env']).size().reset_index(name='count')
+	fig = px.treemap(app_env_counts, 
+					 path=[f'{column_prefix}_env', f'{column_prefix}_app', f'{column_prefix}_app_env'], 
+					 values='count',
+					 title=title)
+	fig.update_traces(textinfo="label+value+percent parent")
+	return fig
 
-@cli.command()
-@global_options
-@click.option('--output', default='traffic_graph', help='Output filename (without extension)')
-@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
-@click.option('--diagram-type', type=click.Choice(['sankey', 'sunburst', 'graphviz']), default='sankey', help='Diagram type')
-@click.option('--direction', type=click.Choice(['LR', 'TB']), default='LR', help='Flow directed graph orientation (LR left-right, TB top-bottom)')
-@click.option('--limit', type=int, default=2000, help='Maximum number of traffic flows to fetch')
-def traffic(pce_host, port, org_id, api_key, api_secret, start, end, output, format, diagram_type, direction, limit):
-	"""Generate traffic graph based on Illumio PCE data."""
-	global label_href_map
-	global value_href_map
-
+def get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit):
 	pce = PolicyComputeEngine(pce_host, port=port, org_id=org_id)
 	pce.set_credentials(api_key, api_secret)
 
 	if not pce.check_connection():
 		click.echo("Connection to PCE failed.")
-		return
+		return None
 
 	for l in pce.labels.get():
 		label_href_map[l.href] = {"key": l.key, "value": l.value}
 		value_href_map["{}={}".format(l.key, l.value)] = l.href
-
 	d_end = parse_date(end) if end != 'today' else datetime.now()
 	d_start = parse_date(start)
 
@@ -360,7 +336,25 @@ def traffic(pce_host, port, org_id, api_key, api_secret, start, end, output, for
 	)
 
 	df = to_dataframe(all_traffic)
-	
+	return(df)
+
+@click.group()
+def cli():
+	"""Illumio CLI tool for traffic analysis and visualization."""
+	pass
+
+@cli.command()
+@global_options
+@click.option('--output', default='traffic_graph', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--diagram-type', type=click.Choice(['sankey', 'sunburst', 'graphviz']), default='sankey', help='Diagram type')
+@click.option('--direction', type=click.Choice(['LR', 'TB']), default='LR', help='Flow directed graph orientation (LR left-right, TB top-bottom)')
+def traffic(pce_host, port, org_id, api_key, api_secret, start, end, output, format, diagram_type, direction, limit):
+	"""Generate traffic graph based on Illumio PCE data."""
+	global label_href_map
+	global value_href_map
+
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
 	content = generate_traffic_graph(df, diagram_type, format, direction)
 	
 	filename = f"{output}.{format}"
@@ -378,52 +372,12 @@ def traffic(pce_host, port, org_id, api_key, api_secret, start, end, output, for
 @click.option('--output', default='traffic_analysis', help='Output filename prefix')
 @click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
 @click.option('--top-n', default=10, help='Number of top items to show')
-def analyze(pce_host, port, org_id, api_key, api_secret, start, end, output, format, top_n):
+def analyze(pce_host, port, org_id, api_key, api_secret, start, end, output, limit, format, top_n):
 	"""Analyze traffic data and generate Top X views and treemap."""
 	global label_href_map
 	global value_href_map
 
-	pce = PolicyComputeEngine(pce_host, port=port, org_id=org_id)
-	pce.set_credentials(api_key, api_secret)
-
-	if not pce.check_connection():
-		click.echo("Connection to PCE failed.")
-		return
-
-	for l in pce.labels.get():
-		label_href_map[l.href] = {"key": l.key, "value": l.value}
-		value_href_map["{}={}".format(l.key, l.value)] = l.href
-
-	d_end = parse_date(end) if end != 'today' else datetime.now()
-	d_start = parse_date(start)
-
-	traffic_query = TrafficQuery.build(
-		start_date=d_start.strftime("%Y-%m-%d"),
-		end_date=d_end.strftime("%Y-%m-%d"),
-		include_services=[],
-		exclude_services=[
-			{"port": 53},
-			{"port": 137},
-			{"port": 138},
-			{"port": 139},
-			{"proto": "udp"}
-		],
-		exclude_destinations=[
-			{"transmission": "broadcast"},
-			{"transmission": "multicast"}
-		],
-		policy_decisions=['allowed', 'potentially_blocked'],
-		max_results=10000  # Increased for better analysis
-	)
-
-	all_traffic = pce.get_traffic_flows_async(
-		query_name='all-traffic',
-		traffic_query=traffic_query
-	)
-
-	df = to_dataframe(all_traffic)
-	
-	# Generate all the views
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
 	views = {
 		'top_talkers': generate_top_talkers(df, top_n),
 		'top_destinations': generate_top_destinations(df, top_n),
@@ -442,5 +396,108 @@ def analyze(pce_host, port, org_id, api_key, api_secret, start, end, output, for
 			fig.write_image(filename)
 		click.echo(f"Saved {name} as {filename}")
 
+def save_figure(fig, output, format):
+	filename = f"{output}.{format}"
+	if format == 'html':
+		fig.write_html(filename)
+	else:
+		fig.write_image(filename)
+	click.echo(f"Saved graph as {filename}")
+
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_talkers', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def top_talkers(pce_host, port, org_id, api_key, api_secret, start, end, output, limit, format, top_n):
+	"""Generate a graph of top talkers."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_top_x(df, 'src_ip', top_n, f"Top {top_n} Talkers")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_destinations', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def top_destinations(pce_host, port, org_id, api_key, api_secret, start, end, output, format, top_n):
+	"""Generate a graph of top destinations."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_top_x(df, 'dst_ip', top_n, f"Top {top_n} Destinations")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_ports', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def top_ports(pce_host, port, org_id, api_key, api_secret, start, end, output, limit, format, top_n):
+	"""Generate a graph of top ports used in the environment."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_top_x(df, 'port', top_n, f"Top {top_n} Ports")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='ip_protocol_treemap', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+def ip_protocol_treemap(pce_host, port, org_id, api_key, api_secret, start, end, limit, output, format):
+	"""Generate a treemap for IP protocols containing the most used ports."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_treemap(df, "IP Protocols and Most Used Ports")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_app_group_sources', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def top_app_group_sources(pce_host, port, org_id, api_key, api_secret, start, end, limit, output, format, top_n):
+	"""Generate a graph of top app group sources."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		df['src_app_group'] = df['src_app'] + ' (' + df['src_env'] + ')'
+		fig = generate_top_x(df, 'src_app_group', top_n, f"Top {top_n} App Group Sources")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_app_group_destinations', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def top_app_group_destinations(pce_host, port, org_id, api_key, api_secret, start, end, limit, output, format, top_n):
+	"""Generate a graph of top app group destinations."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		df['dst_app_group'] = df['dst_app'] + ' (' + df['dst_env'] + ')'
+		fig = generate_top_x(df, 'dst_app_group', top_n, f"Top {top_n} App Group Destinations")
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_talking_app_env_treemap', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+def top_talking_app_env_treemap(pce_host, port, org_id, api_key, api_secret, start, end, limit, output, format):
+	"""Generate a treemap of the app/env tuples talking the most."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_app_env_treemap(df, 'src', "Top Talking App/Env Tuples")
+		save_figure(fig, output, format)
+
+@cli.command()
+@global_options
+@click.option('--output', default='top_receiving_app_env_treemap', help='Output filename (without extension)')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+def top_receiving_app_env_treemap(pce_host, port, org_id, api_key, api_secret, start, end, limit, output, format):
+	"""Generate a treemap of the app/env tuples receiving the most traffic."""
+	df = get_traffic_data(pce_host, port, org_id, api_key, api_secret, start, end, limit)
+	if df is not None:
+		fig = generate_app_env_treemap(df, 'dst', "Top Receiving App/Env Tuples")
+		save_figure(fig, output, format)
+		
 if __name__ == '__main__':
 	cli()
