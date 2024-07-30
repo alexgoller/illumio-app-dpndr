@@ -13,6 +13,20 @@ This CLI tool provides powerful traffic analysis and visualization capabilities 
 ### Graphviz Directed Graph
 ![Graphviz Directed Graph](../examples/examples_graphviz.png)
 
+## Traffic analyze command
+
+![IP Protocol treemap](../examples/examples_analyze_ip_protocol_treemap.png)
+
+![Top app group destinations](../examples/examples_analyze_top_app_group_destinations.png)
+
+![Top app group sources](../examples/examples_analyze_top_app_group_sources.png)
+
+![Top talkers](../examples/examples_analyze_top_talkers.png)
+
+![Top destinations](../examples/examples_analyze_top_destinations.png)
+
+![Top ports](../examples/examples_analyze_top_ports.png)
+
 ## Features
 
 - Fetch traffic flow data from Illumio PCE
