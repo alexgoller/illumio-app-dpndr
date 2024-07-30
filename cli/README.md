@@ -1,16 +1,19 @@
-# Illumio App Dpndr command line tool
+# Illumio CLI Tool
 
-This CLI tool provides powerful traffic analysis and visualization capabilities for Illumio PolicyComputeEngine (PCE) data. It allows users to generate various types of traffic graphs based on PCE data, offering insights into network flows and application communications.
+This CLI tool provides various functionalities for analyzing and visualizing traffic data from Illumio PCE (Policy Compute Engine).
 
 ## Examples
 
 ### Sankey Diagram
+
 ![Sankey Diagram](../examples/examples_sankey.png)
 
 ### Sunburst Diagram
+
 ![Sunburst Diagram](../examples/examples_sunburst.png)
 
 ### Graphviz Directed Graph
+
 ![Graphviz Directed Graph](../examples/examples_graphviz.png)
 
 ## Traffic analyze command
@@ -26,90 +29,107 @@ This CLI tool provides powerful traffic analysis and visualization capabilities 
 ![Top destinations](../examples/examples_analyze_top_destinations.png)
 
 ![Top ports](../examples/examples_analyze_top_ports.png)
-
-## Features
-
-- Fetch traffic flow data from Illumio PCE
-- Generate traffic graphs in multiple formats:
-  - Sankey diagrams
-  - Sunburst diagrams
-  - Graphviz directed graphs
-- Customize date ranges for analysis
-- Export graphs in various formats (HTML, PNG, JPG, SVG)
-- Limit the number of traffic flows to analyze
-- Flexible graph orientation options
-
 ## Installation
 
-1. Clone this repository:
-   ```
-   git clone https://github.com/alexgoller/illumio-app-dpndr
-   cd illumio-app-dpndr/cli
-   ```
-
+1. Ensure you have Python 3.x installed.
 2. Install the required dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+
+```bash
+pip install -r requirements.txt
+```
+
+## Configuration
+
+You can set the following environment variables to avoid entering them as command-line arguments each time:
+
+- `ILLUMIO_PCE_HOST`: PCE host
+- `ILLUMIO_PCE_PORT`: PCE port
+- `ILLUMIO_PCE_ORG_ID`: Organization ID
+- `ILLUMIO_PCE_API_KEY`: API key
+- `ILLUMIO_PCE_API_SECRET`: API secret
+
+For example:
+
+```bash
+export ILLUMIO_PCE_HOST=your-pce-host.com
+export ILLUMIO_PCE_PORT=8443
+export ILLUMIO_PCE_ORG_ID=1
+export ILLUMIO_PCE_API_KEY=your-api-key
+export ILLUMIO_PCE_API_SECRET=your-api-secret
+```
 
 ## Usage
 
-The main command for the CLI tool is `traffic`. Here's the basic syntax:
+The general structure of commands is:
 
+```bash
+python illumio_cli.py [COMMAND] [OPTIONS]
 ```
-python cli.py traffic [OPTIONS]
-```
 
-### Options
-
-- `--pce-host`: PCE host (required)
-- `--port`: PCE port (required)
-- `--org-id`: Organization ID (required)
-- `--api-key`: API key (required)
-- `--api-secret`: API secret (required)
-- `--start`: Start date (YYYY-MM-DD or "X days ago", default: "30 days ago")
-- `--end`: End date (YYYY-MM-DD or "today", default: "today")
-- `--output`: Output filename without extension (default: "traffic_graph")
-- `--format`: Output format (html, png, jpg, svg, default: html)
-- `--diagram-type`: Diagram type (sankey, sunburst, graphviz, default: sankey)
-- `--direction`: Flow directed graph orientation (LR left-right, TB top-bottom, default: LR)
+Global options (can be set via environment variables):
+- `--pce-host`: PCE host
+- `--port`: PCE port
+- `--org-id`: Organization ID
+- `--api-key`: API key
+- `--api-secret`: API secret
+- `--start`: Start date (default: '30 days ago')
+- `--end`: End date (default: 'today')
 - `--limit`: Maximum number of traffic flows to fetch (default: 2000)
 
-### Example
+### Available Commands
 
-Generate a Sankey diagram of traffic flows for the last 7 days:
+1. `traffic`: Generate traffic graph
+2. `analyze`: Generate multiple analysis views
+3. `top_talkers`: Generate a graph of top talkers
+4. `top_destinations`: Generate a graph of top destinations
+5. `top_ports`: Generate a graph of top ports
+6. `ip_protocol_treemap`: Generate a treemap of IP protocols and ports
+7. `top_app_group_sources`: Generate a graph of top app group sources
+8. `top_app_group_destinations`: Generate a graph of top app group destinations
+9. `top_talking_app_env_treemap`: Generate a treemap of top talking app/env tuples
+10. `top_receiving_app_env_treemap`: Generate a treemap of top receiving app/env tuples
 
+### Examples
+
+1. Generate a traffic graph:
+```bash
+python illumio_cli.py traffic --output my_traffic_graph --format png --diagram-type sankey
 ```
-python cli.py traffic --pce-host your-pce-host --port 8443 --org-id 1 --api-key your-api-key --api-secret your-api-secret --start "7 days ago" --diagram-type sankey --format html
-python cli.py analyze --pce-host your-pce-host --port 8443 --org-id 1 --api-key your-api-key --api-secret your-api-secret --start "7 days ago" --diagram-type sankey --format html
+
+2. Analyze traffic data:
+```bash
+python illumio_cli.py analyze --output traffic_analysis --format html --top-n 15
 ```
 
-This will generate an HTML file named `traffic_graph.html` containing the Sankey diagram of traffic flows.
+3. Generate top talkers graph:
+```bash
+python illumio_cli.py top_talkers --output top_talkers --format svg --top-n 20
+```
 
-## Output
+4. Generate IP protocol treemap:
+```bash
+python illumio_cli.py ip_protocol_treemap --output protocol_treemap --format html
+```
 
-The tool generates a graph visualization based on the specified options. The output file will be saved in the current directory with the name specified by the `--output` option and the appropriate extension based on the `--format` option.
+## Output Formats
 
-## Dependencies
+Most commands support the following output formats:
+- HTML (interactive)
+- PNG
+- JPG
+- SVG
 
-This tool relies on several Python libraries, including:
+Note: The `graphviz` diagram type in the `traffic` command does not support HTML output.
 
-- click
-- pandas
-- numpy
-- illumio
-- plotly
-- kaleido
-- networkx
-- matplotlib
-- pygraphviz
+## Additional Notes
 
-Ensure all dependencies are installed using the `requirements.txt` file.
+- The `start` and `end` options accept dates in the format 'YYYY-MM-DD' or relative dates like '30 days ago'.
+- The `traffic` command supports different diagram types: sankey, sunburst, and graphviz.
+- The graphviz diagram can be oriented left-to-right (LR) or top-to-bottom (TB) using the `--direction` option.
 
-## Contributing
+For more detailed information on each command and its options, use the `--help` flag:
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+```bash
+python illumio_cli.py --help
+python illumio_cli.py [COMMAND] --help
+```
