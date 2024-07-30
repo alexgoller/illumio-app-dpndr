@@ -81,6 +81,7 @@ Generate a Sankey diagram of traffic flows for the last 7 days:
 
 ```
 python cli.py traffic --pce-host your-pce-host --port 8443 --org-id 1 --api-key your-api-key --api-secret your-api-secret --start "7 days ago" --diagram-type sankey --format html
+python cli.py analyze --pce-host your-pce-host --port 8443 --org-id 1 --api-key your-api-key --api-secret your-api-secret --start "7 days ago" --diagram-type sankey --format html
 ```
 
 This will generate an HTML file named `traffic_graph.html` containing the Sankey diagram of traffic flows.
