@@ -21,11 +21,11 @@ import networkx as nx
 import io
 
 def global_options(f):
-	@click.option('--pce-host', required=True, help='PCE host')
-	@click.option('--port', required=True, type=int, help='PCE port')
-	@click.option('--org-id', required=True, help='Organization ID')
-	@click.option('--api-key', required=True, help='API key')
-	@click.option('--api-secret', required=True, help='API secret')
+	@click.option('--pce-host', envvar="ILLUMIO_PCE_HOST", required=True, help='PCE host')
+	@click.option('--port', envvar="ILLUMIO_PCE_PORT", required=True, type=int, help='PCE port')
+	@click.option('--org-id', envvar="ILLUMIO_PCE_ORG_ID", required=True, help='Organization ID')
+	@click.option('--api-key', envvar="ILLUMIO_PCE_API_KEY", required=True, help='API key')
+	@click.option('--api-secret', envvar="ILLUMIO_PCE_API_SECRET", required=True, help='API secret')
 	@click.option('--start', default='30 days ago', help='Start date (YYYY-MM-DD or "X days ago")')
 	@click.option('--end', default='today', help='End date (YYYY-MM-DD or "X days ago")')
 	@click.option('--limit', type=int, default=2000, help='Maximum number of traffic flows to fetch')
