@@ -3,6 +3,7 @@
 import os
 import json
 import click
+from functools import wraps
 import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
@@ -18,6 +19,19 @@ matplotlib.use('Agg')  # Use non-interactive backend
 import pygraphviz as pgv
 import networkx as nx
 import io
+
+def global_options(f):
+    @click.option('--pce-host', required=True, help='PCE host')
+    @click.option('--port', required=True, type=int, help='PCE port')
+    @click.option('--org-id', required=True, help='Organization ID')
+    @click.option('--api-key', required=True, help='API key')
+    @click.option('--api-secret', required=True, help='API secret')
+    @click.option('--start', default='30 days ago', help='Start date (YYYY-MM-DD or "X days ago")')
+    @click.option('--end', default='today', help='End date (YYYY-MM-DD or "X days ago")')
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        return f(*args, **kwargs)
+    return wrapper
 
 label_href_map = {}
 value_href_map = {}
@@ -77,6 +91,38 @@ def to_dataframe(flows):
 		series_array.append(f)
 	
 	return pd.DataFrame(series_array)
+
+def generate_top_x(df, column, n=10, title=""):
+	top_x = df[column].value_counts().nlargest(n)
+	fig = go.Figure(data=[go.Bar(x=top_x.index, y=top_x.values)])
+	fig.update_layout(title=title, xaxis_title=column, yaxis_title="Count")
+	return fig
+
+def generate_treemap(df, title=""):
+	protocol_port = df.groupby(['proto', 'port']).size().reset_index(name='count')
+	fig = px.treemap(protocol_port, path=['proto', 'port'], values='count')
+	fig.update_layout(title=title)
+	return fig
+
+def generate_top_talkers(df, n=10):
+	return generate_top_x(df, 'src_ip', n, f"Top {n} Talkers")
+
+def generate_top_destinations(df, n=10):
+	return generate_top_x(df, 'dst_ip', n, f"Top {n} Destinations")
+
+def generate_top_ports(df, n=10):
+	return generate_top_x(df, 'port', n, f"Top {n} Ports")
+
+def generate_ip_protocol_treemap(df):
+	return generate_treemap(df, "IP Protocols and Most Used Ports")
+
+def generate_top_app_group_sources(df, n=10):
+	df['src_app_group'] = df['src_app'] + ' (' + df['src_env'] + ')'
+	return generate_top_x(df, 'src_app_group', n, f"Top {n} App Group Sources")
+
+def generate_top_app_group_destinations(df, n=10):
+	df['dst_app_group'] = df['dst_app'] + ' (' + df['dst_env'] + ')'
+	return generate_top_x(df, 'dst_app_group', n, f"Top {n} App Group Destinations")
 
 def generate_traffic_graph(df, diagram_type, output_format, direction):
 	connections = defaultdict(lambda: defaultdict(int))
@@ -237,6 +283,7 @@ def cli():
 	pass
 
 @cli.command()
+@global_options
 @click.option('--depth', type=int, default=2, help='Depth of the tree map (1 for protocol only, 2 for protocol and port)')
 # Add other options similar to the 'traffic' command
 def treemap(depth, **kwargs):
@@ -244,6 +291,7 @@ def treemap(depth, **kwargs):
 	pass
 	
 @cli.command()
+@global_options
 @click.option('--top', type=int, default=10, help='Number of top traffic flows to display')
 @click.option('--metric', type=click.Choice(['connections', 'bytes']), default='connections', help='Metric to use for ranking')
 # Add other options similar to the 'traffic' command
@@ -253,6 +301,7 @@ def top_traffic(top, metric, **kwargs):
 	pass
 
 @cli.command()
+@global_options
 @click.option('--top', type=int, default=10, help='Number of top ports to display')
 # Add other options similar to the 'traffic' command
 def top_ports(top, **kwargs):
@@ -261,13 +310,7 @@ def top_ports(top, **kwargs):
 	pass
 
 @cli.command()
-@click.option('--pce-host', required=True, help='PCE host')
-@click.option('--port', required=True, type=int, help='PCE port')
-@click.option('--org-id', required=True, help='Organization ID')
-@click.option('--api-key', required=True, help='API key')
-@click.option('--api-secret', required=True, help='API secret')
-@click.option('--start', default='30 days ago', help='Start date (YYYY-MM-DD or "X days ago")')
-@click.option('--end', default='today', help='End date (YYYY-MM-DD or "X days ago")')
+@global_options
 @click.option('--output', default='traffic_graph', help='Output filename (without extension)')
 @click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
 @click.option('--diagram-type', type=click.Choice(['sankey', 'sunburst', 'graphviz']), default='sankey', help='Diagram type')
@@ -329,6 +372,75 @@ def traffic(pce_host, port, org_id, api_key, api_secret, start, end, output, for
 			f.write(content)
 	
 	click.echo(f"Traffic graph saved as {filename}")
+
+@cli.command()
+@global_options
+@click.option('--output', default='traffic_analysis', help='Output filename prefix')
+@click.option('--format', type=click.Choice(['html', 'png', 'jpg', 'svg']), default='html', help='Output format')
+@click.option('--top-n', default=10, help='Number of top items to show')
+def analyze(pce_host, port, org_id, api_key, api_secret, start, end, output, format, top_n):
+	"""Analyze traffic data and generate Top X views and treemap."""
+	global label_href_map
+	global value_href_map
+
+	pce = PolicyComputeEngine(pce_host, port=port, org_id=org_id)
+	pce.set_credentials(api_key, api_secret)
+
+	if not pce.check_connection():
+		click.echo("Connection to PCE failed.")
+		return
+
+	for l in pce.labels.get():
+		label_href_map[l.href] = {"key": l.key, "value": l.value}
+		value_href_map["{}={}".format(l.key, l.value)] = l.href
+
+	d_end = parse_date(end) if end != 'today' else datetime.now()
+	d_start = parse_date(start)
+
+	traffic_query = TrafficQuery.build(
+		start_date=d_start.strftime("%Y-%m-%d"),
+		end_date=d_end.strftime("%Y-%m-%d"),
+		include_services=[],
+		exclude_services=[
+			{"port": 53},
+			{"port": 137},
+			{"port": 138},
+			{"port": 139},
+			{"proto": "udp"}
+		],
+		exclude_destinations=[
+			{"transmission": "broadcast"},
+			{"transmission": "multicast"}
+		],
+		policy_decisions=['allowed', 'potentially_blocked'],
+		max_results=10000  # Increased for better analysis
+	)
+
+	all_traffic = pce.get_traffic_flows_async(
+		query_name='all-traffic',
+		traffic_query=traffic_query
+	)
+
+	df = to_dataframe(all_traffic)
+	
+	# Generate all the views
+	views = {
+		'top_talkers': generate_top_talkers(df, top_n),
+		'top_destinations': generate_top_destinations(df, top_n),
+		'top_ports': generate_top_ports(df, top_n),
+		'ip_protocol_treemap': generate_ip_protocol_treemap(df),
+		'top_app_group_sources': generate_top_app_group_sources(df, top_n),
+		'top_app_group_destinations': generate_top_app_group_destinations(df, top_n)
+	}
+	
+	# Save all views
+	for name, fig in views.items():
+		filename = f"{output}_{name}.{format}"
+		if format == 'html':
+			fig.write_html(filename)
+		else:
+			fig.write_image(filename)
+		click.echo(f"Saved {name} as {filename}")
 
 if __name__ == '__main__':
 	cli()
