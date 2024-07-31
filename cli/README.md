@@ -18,6 +18,8 @@ This CLI tool provides various functionalities for analyzing and visualizing tra
 
 ## Traffic analyze command
 
+![Treemap of App traffic](../examples/examples_top-talking-app-env-treemap.png)
+
 ![IP Protocol treemap](../examples/examples_analyze_ip_protocol_treemap.png)
 
 ![Top app group destinations](../examples/examples_analyze_top_app_group_destinations.png)
